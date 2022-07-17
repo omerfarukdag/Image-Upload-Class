@@ -8,7 +8,7 @@
 <body>
 <?php
 if (isset($_POST)) {
-    require_once 'upload.class.php';
+    require_once 'class.upload.php';
 
     switch (@$_POST['type']) {
         case 'single':
@@ -37,7 +37,7 @@ if (isset($_POST)) {
 </form>
 <br>
 <form method="POST" enctype="multipart/form-data">
-    <label for="files">File:</label>
+    <label for="files">Files:</label>
     <input id="files" type="file" name="files[]" multiple>
     <input type="hidden" name="type" value="multiple">
     <button type="submit">Upload</button>
