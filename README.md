@@ -30,5 +30,10 @@ $upload = new ImageUpload($_FILES['file']);
 ```php
 require_once 'class.upload.php';
 $upload = new ImageUpload($_FILES['files'], true);
-print_r($upload->uploaded_files);
+    if (count($upload->uploaded_files) > 0) {
+        print_r($upload->uploaded_files);
+    }
+    if (count($upload->errors) > 0) {
+        print_r($upload->errors);
+    }
 ```

@@ -17,7 +17,7 @@ class ImageUpload
 
     public $status = false;
     public $error = null;
-    private $show_multiple_upload_errors = true;
+    public $errors = array();
 
     public function __construct($file, $multiple = false)
     {
@@ -29,8 +29,7 @@ class ImageUpload
                 $this->file_tmp_name = $file['tmp_name'];
                 $this->file_size = $file['size'];
                 $this->file_type = $file['type'];
-                $this->file_ext = explode('.', $this->file_name);
-                $this->file_ext = strtolower(end($this->file_ext));
+                $this->file_ext = strtolower(pathinfo($this->file_name, PATHINFO_EXTENSION));
                 $this->single();
             }
         }
@@ -44,10 +43,10 @@ class ImageUpload
                     if (!file_exists($this->upload_dir)) {
                         mkdir($this->upload_dir);
                     }
-                    $this->file_name = time() . '-' . rand(1000000, 9999999) . '.' . $this->file_ext;
+                    $this->file_name = time() . '-' . md5(rand(1, 999999999999)) . '.' . $this->file_ext;
                     $this->uploaded_file = $this->upload_dir . $this->file_name;
                     if (file_exists($this->uploaded_file)) {
-                        $this->file_name = time() . '-' . rand(1000000, 9999999) . '.' . $this->file_ext;
+                        $this->file_name = time() . '-' . uniqid(sha1(rand(1, 999999999999)), true) . '.' . $this->file_ext;
                         $this->uploaded_file = $this->upload_dir . $this->file_name;
                     }
                     if (move_uploaded_file($this->file_tmp_name, $this->uploaded_file)) {
@@ -66,15 +65,12 @@ class ImageUpload
         }
     }
 
-
     private function multiple($images)
     {
         $files = array();
-        foreach ($images as $k => $l) {
-            foreach ($l as $i => $v) {
-                if (!array_key_exists($i, $files))
-                    $files[$i] = array();
-                $files[$i][$k] = $v;
+        foreach ($images as $key => $values) {
+            foreach ($values as $index => $data) {
+                $files[$index][$key] = $data;
             }
         }
         foreach ($files as $file) {
@@ -82,9 +78,7 @@ class ImageUpload
             if (!is_null($this->uploaded_file)) {
                 $this->uploaded_files[] = $this->uploaded_file;
             } else {
-                if ($this->show_multiple_upload_errors) {
-                    $this->uploaded_files[] = $this->error;
-                }
+                $this->errors[] = $this->error;
             }
             $this->clean();
         }
@@ -97,14 +91,17 @@ class ImageUpload
         $this->file_size = null;
         $this->file_type = null;
         $this->file_ext = null;
+
         $this->uploaded_file = null;
-        $this->status = false;
         $this->error = null;
+
+        $this->status = false;
     }
 
     public function __destruct()
     {
         $this->clean();
         $this->uploaded_files = array();
+        $this->errors = array();
     }
 }
