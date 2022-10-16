@@ -11,27 +11,22 @@
     <?php
     if (isset($_POST)) {
         require_once 'class.upload.php';
-
         switch (@$_POST['type']) {
             case 'single':
-                $upload = new ImageUpload($_FILES['file']);
+                $upload = new Upload\Image($_FILES['image']);
                 if ($upload->status) {
-                    echo '<pre>' . $upload->uploaded_file . '</pre>';
+                    echo $upload->uploaded_file;
                 } else {
-                    echo '<pre>' . $upload->error . '</pre>';
+                    echo $upload->error;
                 }
                 break;
             case 'multiple':
-                $upload = new ImageUpload($_FILES['files'], true);
-                if (count($upload->uploaded_files) > 0) {
-                    echo '<pre>';
+                $upload = new Upload\Image($_FILES['images'], true);
+                if (isset($upload->uploaded_files) && !empty($upload->uploaded_files)) {
                     print_r($upload->uploaded_files);
-                    echo '</pre>';
                 }
-                if (count($upload->errors) > 0) {
-                    echo '<pre>';
+                if (isset($upload->errors) && !empty($upload->errors)) {
                     print_r($upload->errors);
-                    echo '</pre>';
                 }
                 break;
         }
@@ -40,14 +35,14 @@
     <br>
     <form method="POST" enctype="multipart/form-data">
         <label for="file">File:</label>
-        <input id="file" type="file" name="file">
+        <input id="file" type="file" name="image">
         <input type="hidden" name="type" value="single">
         <button type="submit">Upload</button>
     </form>
     <br>
     <form method="POST" enctype="multipart/form-data">
         <label for="files">Files:</label>
-        <input id="files" type="file" name="files[]" multiple>
+        <input id="files" type="file" name="images[]" multiple>
         <input type="hidden" name="type" value="multiple">
         <button type="submit">Upload</button>
     </form>
