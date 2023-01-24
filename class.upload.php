@@ -1,107 +1,123 @@
 <?php
 
-namespace Upload;
-class Image
+class ImageUploader
 {
     private ?string $file_name = null;
     private ?string $file_tmp_name = null;
     private ?int $file_size = null;
     private ?string $file_type = null;
     private ?string $file_ext = null;
+    private int $count = 0;
+    private ?string $new_file_name = null;
+
+    private ?string $uploaded_file = null;
+    private array $uploaded_files = array();
+    private array $errors = array();
 
     private const UPLOAD_DIR = 'uploads/';
-    public ?string $uploaded_file = null;
-    public array $uploaded_files = array();
-
     private const ALLOWED_FILE_TYPES = array('image/jpeg', 'image/png', 'image/gif');
     private const ALLOWED_FILE_EXTENSIONS = array('jpg', 'jpeg', 'png', 'gif');
     private const MAX_FILE_SIZE = 1048576 * 2;
 
-    public bool $status = false;
-    public ?string $error = null;
-    public array $errors = array();
-
-    public function __construct(array $file, bool $is_multiple = false)
+    public function __construct(array $file)
     {
-        if (!empty($file) && in_array($is_multiple, array(true, false))) {
-            if ($is_multiple === true) {
-                $this->multiple($file);
-            } else {
-                $this->file_name = $file['name'];
-                $this->file_tmp_name = $file['tmp_name'];
-                $this->file_size = $file['size'];
-                $this->file_type = $file['type'];
+        if (!is_array($file['name'])) {
+            $this->file_name = $file['name'];
+            $this->file_tmp_name = $file['tmp_name'];
+            $this->file_size = $file['size'];
+            $this->file_type = $file['type'];
+            $this->file_ext = strtolower(pathinfo($this->file_name, PATHINFO_EXTENSION));
+            $this->upload();
+        } else {
+            $this->count = count($file['name']);
+            for ($i = 0; $i < $this->count; $i++) {
+                $this->file_name = $file['name'][$i];
+                $this->file_tmp_name = $file['tmp_name'][$i];
+                $this->file_size = $file['size'][$i];
+                $this->file_type = $file['type'][$i];
                 $this->file_ext = strtolower(pathinfo($this->file_name, PATHINFO_EXTENSION));
-                $this->single();
+                $this->upload();
             }
         }
     }
 
-    private function single(): void
+    private function upload(): void
     {
         if (file_exists($this->file_tmp_name)) {
             if (in_array($this->file_type, self::ALLOWED_FILE_TYPES)) {
                 if (in_array($this->file_ext, self::ALLOWED_FILE_EXTENSIONS)) {
-                    if ($this->file_size < self::MAX_FILE_SIZE) {
+                    if ($this->file_size <= self::MAX_FILE_SIZE) {
                         if (!file_exists(self::UPLOAD_DIR)) {
                             mkdir(self::UPLOAD_DIR);
                         }
-                        $this->file_name = time() . '-' . uniqid(sha1(md5(rand() . time())), true) . '.' . $this->file_ext;
-                        $this->uploaded_file = self::UPLOAD_DIR . $this->file_name;
+                        $this->uploaded_file = self::UPLOAD_DIR . $this->createFileName();
                         if (move_uploaded_file($this->file_tmp_name, $this->uploaded_file)) {
-                            $this->status = true;
+                            if ($this->count > 0) {
+                                $this->uploaded_files[] = $this->uploaded_file;
+                            }
                         } else {
-                            $this->error = 'An error occurred while uploading the file.';
+                            $this->errors[] = 'This file could not be uploaded.';
                         }
                     } else {
-                        $this->error = 'This file is bigger than ' . floor(self::MAX_FILE_SIZE / 1048576) . 'MB (' . floor($this->file_size / 1048576) . 'MB)';
+                        $this->errors[] = 'This file is bigger than ' . $this->convertToMB(self::MAX_FILE_SIZE) . 'MB (' . $this->convertToMB($this->file_size) . 'MB)';
                     }
                 } else {
-                    $this->error = 'This file extension is not allowed. (' . $this->file_ext . ')';
+                    $this->errors[] = 'This file extension is not allowed. (' . $this->file_ext . ')';
                 }
             } else {
-                $this->error = 'This file type is not allowed. (' . $this->file_type . ')';
+                $this->errors[] = 'This file type is not allowed. (' . $this->file_type . ')';
             }
         } else {
-            $this->error = 'There is no file to upload.';
+            $this->errors[] = 'This file does not exist.';
         }
     }
 
-    private function multiple(array $form_files): void
+    private function createFileName(): string
     {
-        $files = array();
-        foreach ($form_files as $key => $values) {
-            foreach ($values as $index => $data) {
-                $files[$index][$key] = $data;
-            }
+        $this->new_file_name = time() . '-' . uniqid(sha1(md5(rand() . time()))) . '.' . $this->file_ext;
+        if (file_exists(self::UPLOAD_DIR . $this->new_file_name)) {
+            $this->createFileName();
         }
-        foreach ($files as $file) {
-            self::__construct($file);
-            if (!is_null($this->uploaded_file) && file_exists($this->uploaded_file)) {
-                $this->uploaded_files[] = $this->uploaded_file;
-            } else {
-                $this->errors[] = $this->error;
-            }
-            $this->clean();
-        }
+        return $this->new_file_name;
     }
 
-    private function clean(): void
+    private function convertToMB(int $bytes): float
     {
-        $this->file_name = null;
-        $this->file_tmp_name = null;
-        $this->file_size = null;
-        $this->file_type = null;
-        $this->file_ext = null;
-        $this->uploaded_file = null;
-        $this->error = null;
-        $this->status = false;
+        return round($bytes / 1048576, 2);
+    }
+
+    public function hasUploadedFile(): bool
+    {
+        return !empty($this->uploaded_file);
+    }
+
+    public function getUploadedFile(): ?string
+    {
+        return $this->uploaded_file;
+    }
+
+    public function hasUploadedFiles(): bool
+    {
+        return !empty($this->uploaded_files);
+    }
+
+    public function getUploadedFiles(): array
+    {
+        return $this->uploaded_files;
+    }
+
+    public function hasErrors(): bool
+    {
+        return !empty($this->errors);
+    }
+
+    public function getErrors(): array
+    {
+        return $this->errors;
     }
 
     public function __destruct()
     {
-        $this->clean();
-        $this->uploaded_files = array();
-        $this->errors = array();
+        unset($this->file_name, $this->file_tmp_name, $this->file_size, $this->file_type, $this->file_ext, $this->count, $this->new_file_name, $this->uploaded_file, $this->uploaded_files, $this->errors);
     }
 }
