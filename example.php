@@ -9,44 +9,41 @@
 
 <body>
     <?php
-    echo '<pre>';
-    if (isset($_POST)) {
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        echo '<pre>';
         require_once 'class.upload.php';
-        switch (@$_POST['type']) {
-            case 'single':
-                $upload = new ImageUploader($_FILES['image']);
-                if ($upload->hasUploadedFile()) {
-                    echo $upload->getUploadedFile();
-                }
-                if ($upload->hasErrors()) {
-                    print_r($upload->getErrors());
-                }
-                break;
-            case 'multiple':
-                $upload = new ImageUploader($_FILES['images']);
-                if ($upload->hasUploadedFiles()) {
-                    print_r($upload->getUploadedFiles());
-                }
-                if ($upload->hasErrors()) {
-                    print_r($upload->getErrors());
-                }
-                break;
+        $upload = match ($_POST['type']) {
+            'single' => new ImageUploader($_FILES['image']),
+            'multiple', 'webkitdirectory' => new ImageUploader($_FILES['images']),
+        };
+        if ($upload->hasUploaded()) {
+            print_r($upload->getUploaded());
         }
+        if ($upload->hasErrors()) {
+            print_r($upload->getErrors());
+        }
+        echo '</pre>';
     }
-    echo '</pre>';
     ?>
     <br>
     <form method="POST" enctype="multipart/form-data">
-        <label for="file">File:</label>
+        <label for="file">File: (Single)</label>
         <input id="file" type="file" name="image">
         <input type="hidden" name="type" value="single">
         <button type="submit">Upload</button>
     </form>
     <br>
     <form method="POST" enctype="multipart/form-data">
-        <label for="files">Files:</label>
+        <label for="files">Files: (Multiple)</label>
         <input id="files" type="file" name="images[]" multiple>
         <input type="hidden" name="type" value="multiple">
+        <button type="submit">Upload</button>
+    </form>
+    <br>
+    <form method="POST" enctype="multipart/form-data">
+        <label for="files">Files: (Directory)</label>
+        <input id="files" type="file" name="images[]" multiple webkitdirectory>
+        <input type="hidden" name="type" value="webkitdirectory">
         <button type="submit">Upload</button>
     </form>
 </body>
